@@ -1,0 +1,13 @@
+.vscode
+
+obj/
+*.d
+*.o
+out*
+test*
+
+vulkan
+
+
+
+
