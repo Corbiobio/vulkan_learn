@@ -73,7 +73,8 @@ class App
 	bool createShaderModule(const std::string& name, shaderc_shader_kind kind, VkShaderModule& shader_module);
 	bool createShader();
 	bool createGraphicsPipelines();
-	bool createRessources();
+	bool createTimeline();
+	bool createCommandBuffer();
 
 	void destroySwapchain();
 

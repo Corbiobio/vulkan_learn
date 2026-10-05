@@ -532,7 +532,7 @@ bool App::createGraphicsPipelines()
 	return true;
 }
 
-bool App::createRessources()
+bool App::createTimeline()
 {
 	VkSemaphoreTypeCreateInfo semaphore_type
 	{
@@ -548,7 +548,38 @@ bool App::createRessources()
 	if (vkCreateSemaphore(vk_device, &semaphore_info, nullptr, &timeline_semaphore) != VK_SUCCESS)
 		return error("cannot create timeline semaphore");
 	
-	
+	for (FrameRessources &res : frame_ressources)
+	{
+		VkSemaphoreCreateInfo semaphore_info { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+		if (vkCreateSemaphore(vk_device, &semaphore_info, nullptr, &res.img_semaphore) != VK_SUCCESS)
+			return error("cannot create semaphore for timeline frame");
+	}
+
+	return true;
+}
+
+bool App::createCommandBuffer()
+{
+	for (FrameRessources &res : frame_ressources)
+	{	
+		VkCommandPoolCreateInfo pool_info
+		{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.queueFamilyIndex = queue_fam_idx,
+		};
+		if (vkCreateCommandPool(vk_device, &pool_info, nullptr, &res.cmd_pool) != VK_SUCCESS)
+			return error("cannot create command pool");
+
+		VkCommandBufferAllocateInfo cmd_buffer_info
+		{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.commandPool = res.cmd_pool,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		if (vkAllocateCommandBuffers(vk_device, &cmd_buffer_info, &res.cmd_buffer) != VK_SUCCESS)
+			return error("cannot create command buffer");
+	}
 
 	return true;
 }
@@ -582,7 +613,10 @@ bool App::initialiseVulkan()
 	if (!createGraphicsPipelines())
 		return false;
 
-	if (!createRessources())
+	if (!createTimeline())
+		return false;
+
+	if (!createCommandBuffer())
 		return false;
 
 	return true;
@@ -654,13 +688,24 @@ void App::shutdown()
 	SDL_SetHint(SDL_HINT_SHUTDOWN_DBUS_ON_QUIT, "1");
 	//TODO FIX LEAK SDL ?????
 
+	vkDeviceWaitIdle(vk_device);
+
+	for (FrameRessources &res : frame_ressources)
+	{
+		if (res.img_semaphore)
+			vkDestroySemaphore(vk_device, res.img_semaphore, nullptr);
+		if (res.cmd_pool)
+			vkDestroyCommandPool(vk_device, res.cmd_pool, nullptr);
+	}
+	vkDestroySemaphore(vk_device, timeline_semaphore, nullptr);
+	
 	vkDestroyPipeline(vk_device, pipeline, nullptr);
 	vkDestroyPipelineLayout(vk_device, pipeline_layout, nullptr);
-
-	destroySwapchain();
-
+	
 	vkDestroyShaderModule(vk_device, vertex_shader, nullptr);
 	vkDestroyShaderModule(vk_device, fragment_shader, nullptr);
+
+	destroySwapchain();
 
 	if (vma_allocator)
 		vmaDestroyAllocator(vma_allocator);
