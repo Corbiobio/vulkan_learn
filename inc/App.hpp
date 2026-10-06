@@ -25,8 +25,9 @@ class App
 {
 	constexpr static SDL_InitFlags SDL_INIT_FLAG = SDL_INIT_VIDEO;
 	SDL_Window* window = nullptr;
-	i32 width = 1920;
-	i32 height = 1080;
+	u32 width = 1920;
+	u32 height = 1080;
+	u64 frame_index = 0;
 
 	VkInstance	vk_instance = nullptr;
 	VkSurfaceKHR vk_surface = nullptr;
@@ -40,6 +41,7 @@ class App
 	VmaAllocator vma_allocator = nullptr;
 
 	constexpr static VkFormat SWAPCHAIN_FORMAT = VK_FORMAT_B8G8R8A8_SRGB;
+	bool swapchain_recreate = false;
 	u32 swapchain_width = 0;
 	u32 swapchain_height = 0;
 	VkSwapchainKHR vk_swapchain = nullptr;
@@ -59,6 +61,7 @@ class App
 	VkPipeline pipeline = nullptr;
 
 	constexpr static u32 MAX_FRAME_FLIGHT = 2;
+    u64 next_signal_value = MAX_FRAME_FLIGHT + 1;
 	VkSemaphore timeline_semaphore = nullptr;
 	std::array<FrameRessources, MAX_FRAME_FLIGHT> frame_ressources;
 
