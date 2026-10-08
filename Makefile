@@ -32,15 +32,15 @@ SDL = /home/edarnand/Downloads/sdl_3.4.16/
 SDL_LIB = $(SDL)build/libSDL3.so
 INC += -I $(SDL)include
 
-VOLK_LIB = /home/edarnand/sgoinfre/vulkan/1.4.357.1/x86_64/lib/libvolk.a
-SHADERC_LIB = /home/edarnand/sgoinfre/vulkan/1.4.357.1/x86_64/lib/libshaderc_combined.a
-VULKAN_LIB = /home/edarnand/sgoinfre/vulkan/1.4.357.1/x86_64/lib/VulkanLoader/lib/libvulkan.so.1.4.357
+VULKAN = /home/edarnand/sgoinfre/vulkan/1.4.357.1/x86_64/
+VULKAN_LIB = $(VULKAN)lib/VulkanLoader/lib/libvulkan.so.1.4.357
+SHADERC_LIB = $(VULKAN)lib/libshaderc_combined.a
+VOLK_LIB = $(VULKAN)lib/libvolk.a
+INC += -I $(VULKAN)include
 
 GLM = /home/edarnand/Downloads/glm/
 GLM_LIB = $(GLM)build/glm/libglm.a
 INC += -I $(GLM)build_share/include
-
-INC += -I /sgoinfre/edarnand/vulkan/1.4.357.1/x86_64/include
 
 LIB = $(SDL_LIB) $(GLM_LIB) $(VOLK_LIB) $(VULKAN_LIB) $(SHADERC_LIB)
 
