@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "App.hpp"
-#include "vulkan/vulkan_core.h"
 
 bool error(const char* msg)
 {
@@ -106,7 +105,7 @@ bool App::getPhysicalDevice()
 	{
 		VkPhysicalDeviceProperties2* props = device_props.data() + i;
 		vkGetPhysicalDeviceProperties2(devices[i], props);
-		std::cout << "physical device: " << props->properties.deviceName << " " << props->properties.deviceType << "\n";
+		std::cout << "physical device " << i << ": " << props->properties.deviceName << "\n";
 		if (props->properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 		{
 			main_device = devices[i];
@@ -206,7 +205,7 @@ bool App::createDevice()
 		.pNext = &features_12,
 	};
 	VkPhysicalDeviceFeatures2 features_10
-	 {
+	{
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 		.pNext = &features_11
 	};
@@ -262,9 +261,6 @@ bool App::initialiseVMA()
 
 bool App::createSwapchain(const u32 width, const u32 height)
 {
-	swapchain_width = width;
-	swapchain_height = height;
-
 	VkSurfaceCapabilities2KHR surface_capabilities
 	{
 		.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR,
@@ -280,6 +276,21 @@ bool App::createSwapchain(const u32 width, const u32 height)
 	u32 request_image_count = std::max(2u, surface_capabilities.surfaceCapabilities.minImageCount);
 	if (surface_capabilities.surfaceCapabilities.maxImageCount > 0)
 		request_image_count = std::min(request_image_count, surface_capabilities.surfaceCapabilities.maxImageCount);
+
+	//TODO for further improvement
+	//VkSurfacePresentScalingCapabilitiesKHR(...)
+	//VkSwapchainPresentScalingCreateInfoKHR scaling_info
+	//{
+	//	.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_SCALING_CREATE_INFO_KHR,
+	//	.scalingBehavior = VK_PRESENT_SCALING_ONE_TO_ONE_BIT_KHR,
+	//	.presentGravityX = VK_PRESENT_GRAVITY_MIN_BIT_KHR,
+	//	.presentGravityY = VK_PRESENT_GRAVITY_MIN_BIT_KHR,
+	//};
+
+	const VkExtent2D min_extent = surface_capabilities.surfaceCapabilities.minImageExtent;
+	const VkExtent2D max_extent = surface_capabilities.surfaceCapabilities.maxImageExtent;
+	swapchain_width = std::min(std::max(min_extent.width, width), max_extent.width);
+	swapchain_height = std::min(std::max(min_extent.height, height), max_extent.height);
 
 	VkSwapchainCreateInfoKHR swapchain_info
 	{
@@ -527,7 +538,6 @@ bool App::createGraphicsPipelines()
 		.layout = pipeline_layout,
 		.renderPass = VK_NULL_HANDLE,
 	};
-	std::cout << render_info.colorAttachmentCount << "\n";
 	if (vkCreateGraphicsPipelines(vk_device, nullptr, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS)
 		return error("cannot create graphics pipline");
 	return true;
