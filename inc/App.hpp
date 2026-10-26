@@ -7,6 +7,7 @@
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 #include <shaderc/shaderc.h>
+#include <glm/glm.hpp>
 
 #include <string>
 #include <vector>
@@ -19,6 +20,11 @@ struct FrameRessources
 	VkCommandPool cmd_pool = nullptr;
 	VkCommandBuffer cmd_buffer = nullptr;
 	VkSemaphore img_semaphore = nullptr;
+};
+
+struct Vertex {
+	glm::vec3 position;
+	glm::vec3 color;
 };
 
 class App
@@ -65,6 +71,10 @@ class App
 	VkSemaphore timeline_semaphore = nullptr;
 	std::array<FrameRessources, MAX_FRAME_FLIGHT> frame_ressources;
 
+	//mesh test
+	VmaAllocation vertex_alloc = nullptr;
+	VkBuffer vertex_buffer = nullptr;
+
 	void render();
 	bool createVulkanInstance();
 	bool initialiseVulkan();
@@ -78,8 +88,10 @@ class App
 	bool createGraphicsPipelines();
 	bool createTimeline();
 	bool createCommandBuffer();
+	bool test_mesh();
 
 	void destroySwapchain();
+
 
 
 public:

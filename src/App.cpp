@@ -1,5 +1,6 @@
 #include <SDL3/SDL_vulkan.h>
 
+#include <array>
 #include <shaderc/env.h>
 #include <shaderc/shaderc.h>
 #include <shaderc/shaderc.hpp>
@@ -393,7 +394,7 @@ bool App::createShaderModule(const std::string& file_name, shaderc_shader_kind k
 	opts.SetTargetSpirv(shaderc_spirv_version_1_6);
 	opts.SetOptimizationLevel(shaderc_optimization_level_performance);
 	const shaderc::SpvCompilationResult res = compiler.CompileGlslToSpv(content, kind, file_name.c_str(), opts);
-
+	
 	if (res.GetCompilationStatus() != shaderc_compilation_status_success)
 	{
 		std::cerr << "cannot compile shader " + file_name + ": " + res.GetErrorMessage() + "\n";
@@ -450,10 +451,36 @@ bool App::createGraphicsPipelines()
 		}
 	};
 	const u32 shader_stage_count = shader_stage.size();
+
+
+	VkVertexInputBindingDescription vertex_binding
+	{
+		.binding = 0,
+		.stride = sizeof(Vertex),
+		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+	};
+
+	VkVertexInputAttributeDescription default_attribute
+	{
+		.binding = 0,
+		.format = VK_FORMAT_R32G32B32_SFLOAT,
+	};
+	std::vector<VkVertexInputAttributeDescription> vertex_attributes (2, default_attribute);
+	vertex_attributes[0].location = 0;
+	vertex_attributes[0].offset = offsetof(Vertex, position);
+	vertex_attributes[1].location = 1;
+	vertex_attributes[1].offset = offsetof(Vertex, color);
+
 	VkPipelineVertexInputStateCreateInfo vertex_info
 	{
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &vertex_binding,
+		.vertexAttributeDescriptionCount = (u32)vertex_attributes.size(),
+		.pVertexAttributeDescriptions = vertex_attributes.data(),
 	};
+
+
 	VkPipelineInputAssemblyStateCreateInfo assembly_state_info
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -595,6 +622,60 @@ bool App::createCommandBuffer()
 	return true;
 }
 
+const u32 vertex_num = 6;
+
+std::array<Vertex, vertex_num> vertexs
+{
+	{
+		{{ 0.0, -0.1, 0.0}, {1.0,0.0,0.0}},
+		{{ -0.1, 0.1, 0.0}, {0.0,1.0,0.0}},
+		{{ 0.1, 0.1, 0.0}, {0.0,0.0,1.0}},
+		{{ 0.0, -0.9, 0.0}, {1.0,0.0,0.0}},
+		{{ -0.9, 0.9, 0.0}, {0.0,1.0,0.0}},
+		{{ 0.9, 0.9, 0.0}, {0.0,0.0,1.0}},
+	},
+	
+};
+
+
+bool App::test_mesh()
+{
+	//std::array<Vertex, 3> vertexs
+	//{
+	//	{
+	//		{{ 0.0, -0.5, 0.0}, {1.0,0.0,0.0}},
+	//		{{ -0.5, 0.5, 0.0}, {0.0,1.0,0.0}},
+	//		{{ 0.5, 0.5, 0.0}, {0.0,0.0,1.0}},
+	//	},
+		
+	//};
+	VkBufferCreateInfo buffer_info
+	{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = vertexs.size() * sizeof(Vertex),
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	};
+
+	VmaAllocationCreateInfo alloc_info
+	{
+		.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+		.usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+		//.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(vma_allocator, &buffer_info, &alloc_info, &vertex_buffer, &vertex_alloc, nullptr) != VK_SUCCESS)
+		return error("vma cannot allocate mesh buffer");
+
+	void* data;
+	vmaMapMemory(vma_allocator, vertex_alloc, &data);
+
+	memcpy(data, vertexs.data(), vertexs.size() * sizeof(Vertex));
+
+	vmaUnmapMemory(vma_allocator, vertex_alloc);
+	
+	return true;
+}
+
 bool App::initialiseVulkan()
 {
 	if (!createVulkanInstance())
@@ -629,6 +710,8 @@ bool App::initialiseVulkan()
 
 	if (!createCommandBuffer())
 		return false;
+
+	test_mesh();
 
 	return true;
 }
@@ -708,6 +791,9 @@ void App::shutdown()
 		if (res.cmd_pool)
 			vkDestroyCommandPool(vk_device, res.cmd_pool, nullptr);
 	}
+
+	vmaDestroyBuffer(vma_allocator, vertex_buffer, vertex_alloc);
+
 	vkDestroySemaphore(vk_device, timeline_semaphore, nullptr);
 	
 	vkDestroyPipeline(vk_device, pipeline, nullptr);
@@ -897,7 +983,11 @@ void App::render(void)
 	vkCmdSetScissor(res.cmd_buffer, 0, 1, &scissor);
 
 	vkCmdBindPipeline(res.cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	vkCmdDraw(res.cmd_buffer, 3, 1, 0, 0);
+	//vkCmdDraw(res.cmd_buffer, 3, 1, 0, 0);
+
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(res.cmd_buffer, 0, 1, &vertex_buffer, &offset);
+	vkCmdDraw(res.cmd_buffer, vertex_num, 1, 0, 0);
 
 	vkCmdEndRendering(res.cmd_buffer);
 
