@@ -1,17 +1,18 @@
 #ifndef APP_HPP
 # define APP_HPP
 
+#include <vector>
+#include <string>
+#include <array>
+
 #include <SDL3/SDL.h>
 
+#include <glm/vec3.hpp>
 #include <volk/volk.h>
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 #include <shaderc/shaderc.h>
-#include <glm/glm.hpp>
 
-#include <string>
-#include <vector>
-#include <array>
 
 #include "type.hpp"
 
@@ -22,9 +23,18 @@ struct FrameRessources
 	VkSemaphore img_semaphore = nullptr;
 };
 
-struct Vertex {
+struct Vertex
+{
 	glm::vec3 position;
 	glm::vec3 color;
+};
+
+struct Mesh
+{
+	std::vector<Vertex> verticies;
+
+	VkBuffer vertex_buffer = nullptr;
+	VmaAllocation vertex_alloc = nullptr;
 };
 
 class App
@@ -71,6 +81,8 @@ class App
 	VkSemaphore timeline_semaphore = nullptr;
 	std::array<FrameRessources, MAX_FRAME_FLIGHT> frame_ressources;
 
+	std::vector<Mesh> meshs;
+
 	//mesh test
 	VmaAllocation vertex_alloc = nullptr;
 	VkBuffer vertex_buffer = nullptr;
@@ -88,7 +100,9 @@ class App
 	bool createGraphicsPipelines();
 	bool createTimeline();
 	bool createCommandBuffer();
+
 	bool test_mesh();
+	bool new_mesh(std::vector<Vertex>& vertices);
 
 	void destroySwapchain();
 

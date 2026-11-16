@@ -11,6 +11,7 @@
 
 #include "App.hpp"
 
+
 bool error(const char* msg)
 {
 	std::cerr << msg << "\n";
@@ -622,33 +623,71 @@ bool App::createCommandBuffer()
 	return true;
 }
 
-const u32 vertex_num = 6;
-
-std::array<Vertex, vertex_num> vertexs
+std::vector<Vertex> vertexs
 {
 	{
-		{{ 0.0, -0.1, 0.0}, {1.0,0.0,0.0}},
-		{{ -0.1, 0.1, 0.0}, {0.0,1.0,0.0}},
-		{{ 0.1, 0.1, 0.0}, {0.0,0.0,1.0}},
-		{{ 0.0, -0.9, 0.0}, {1.0,0.0,0.0}},
-		{{ -0.9, 0.9, 0.0}, {0.0,1.0,0.0}},
-		{{ 0.9, 0.9, 0.0}, {0.0,0.0,1.0}},
+		{{ 0.0, -0.1, 0.0}, {1.0, 0.0, 0.0}},
+		{{ -0.1, 0.1, 0.0}, {0.0, 1.0, 0.0}},
+		{{ 0.1, 0.1, 0.0}, {0.0, 0.0, 1.0}},
+		{{ 0.0, -0.9, 0.0}, {1.0, 0.0, 0.0}},
+		{{ -0.9, 0.9, 0.0}, {0.0, 1.0, 0.0}},
+		{{ 0.9, 0.9, 0.0}, {0.0, 0.0, 1.0}},
 	},
-	
 };
 
+std::vector<Vertex> tr1
+{
+	{
+		{{ 0.0, -0.2, 0.0}, {1.0, 0.0, 0.0}},
+		{{ -0.2, 0.2, 0.0}, {0.0, 1.0, 0.0}},
+		{{ 0.2, 0.2, 0.0}, {0.0, 0.0, 1.0}},
+	},
+};
+
+std::vector<Vertex> tr2
+{
+	{
+
+		{{ 0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
+		{{ -0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
+		{{ 0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}},
+	},
+};
+
+bool App::new_mesh(std::vector<Vertex>& vertices)
+{
+	Mesh mesh;
+	mesh.verticies = vertices;
+	const u32 buffer_size = mesh.verticies.size() * sizeof(Vertex);
+
+	VkBufferCreateInfo buffer_info
+	{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = buffer_size,
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	};
+	VmaAllocationCreateInfo alloc_info
+	{
+		.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+		.usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+		//.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(vma_allocator, &buffer_info, &alloc_info, &mesh.vertex_buffer, &mesh.vertex_alloc, nullptr) != VK_SUCCESS)
+		return error("vma cannot allocate mesh buffer");
+
+	//TODO understand this
+	void* data;
+	vmaMapMemory(vma_allocator, mesh.vertex_alloc, &data);
+	memcpy(data, mesh.verticies.data(), buffer_size);
+	vmaUnmapMemory(vma_allocator, mesh.vertex_alloc);
+
+	meshs.push_back(mesh);
+	return true;
+}
 
 bool App::test_mesh()
 {
-	//std::array<Vertex, 3> vertexs
-	//{
-	//	{
-	//		{{ 0.0, -0.5, 0.0}, {1.0,0.0,0.0}},
-	//		{{ -0.5, 0.5, 0.0}, {0.0,1.0,0.0}},
-	//		{{ 0.5, 0.5, 0.0}, {0.0,0.0,1.0}},
-	//	},
-		
-	//};
 	VkBufferCreateInfo buffer_info
 	{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -666,11 +705,10 @@ bool App::test_mesh()
 	if (vmaCreateBuffer(vma_allocator, &buffer_info, &alloc_info, &vertex_buffer, &vertex_alloc, nullptr) != VK_SUCCESS)
 		return error("vma cannot allocate mesh buffer");
 
+	//TODO understand this
 	void* data;
 	vmaMapMemory(vma_allocator, vertex_alloc, &data);
-
 	memcpy(data, vertexs.data(), vertexs.size() * sizeof(Vertex));
-
 	vmaUnmapMemory(vma_allocator, vertex_alloc);
 	
 	return true;
@@ -763,7 +801,8 @@ void App::run()
 		SDL_Event event {0};
 		while (SDL_PollEvent(&event))
 		{
-			if (event.type == SDL_EVENT_QUIT)
+			if (event.type == SDL_EVENT_QUIT || 
+				event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
 				return ;
 			else if (event.type == SDL_EVENT_WINDOW_RESIZED)
 			{
@@ -987,7 +1026,7 @@ void App::render(void)
 
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(res.cmd_buffer, 0, 1, &vertex_buffer, &offset);
-	vkCmdDraw(res.cmd_buffer, vertex_num, 1, 0, 0);
+	vkCmdDraw(res.cmd_buffer, vertexs.size(), 1, 0, 0);
 
 	vkCmdEndRendering(res.cmd_buffer);
 
