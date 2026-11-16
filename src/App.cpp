@@ -623,35 +623,22 @@ bool App::createCommandBuffer()
 	return true;
 }
 
-std::vector<Vertex> vertexs
-{
-	{
-		{{ 0.0, -0.1, 0.0}, {1.0, 0.0, 0.0}},
-		{{ -0.1, 0.1, 0.0}, {0.0, 1.0, 0.0}},
-		{{ 0.1, 0.1, 0.0}, {0.0, 0.0, 1.0}},
-		{{ 0.0, -0.9, 0.0}, {1.0, 0.0, 0.0}},
-		{{ -0.9, 0.9, 0.0}, {0.0, 1.0, 0.0}},
-		{{ 0.9, 0.9, 0.0}, {0.0, 0.0, 1.0}},
-	},
-};
-
 std::vector<Vertex> tr1
 {
-	{
-		{{ 0.0, -0.2, 0.0}, {1.0, 0.0, 0.0}},
-		{{ -0.2, 0.2, 0.0}, {0.0, 1.0, 0.0}},
-		{{ 0.2, 0.2, 0.0}, {0.0, 0.0, 1.0}},
-	},
+	{{ 0.0, -0.2, 0.0}, {1.0, 0.0, 0.0}},
+	{{ -0.2, 0.2, 0.0}, {0.0, 1.0, 0.0}},
+	{{ 0.2, 0.2, 0.0}, {0.0, 0.0, 1.0}},
+
+	{{ 0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
+	{{ -0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
+	{{ 0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}},
 };
 
 std::vector<Vertex> tr2
 {
-	{
-
-		{{ 0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
-		{{ -0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
-		{{ 0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}},
-	},
+	{{ 0.0, -0.9, 0.0}, {1.0, 0.0, 0.0}},
+	{{ -0.9, 0.9, 0.0}, {0.0, 1.0, 0.0}},
+	{{ 0.9, 0.9, 0.0}, {0.0, 0.0, 1.0}},
 };
 
 bool App::new_mesh(std::vector<Vertex>& vertices)
@@ -683,34 +670,6 @@ bool App::new_mesh(std::vector<Vertex>& vertices)
 	vmaUnmapMemory(vma_allocator, mesh.vertex_alloc);
 
 	meshs.push_back(mesh);
-	return true;
-}
-
-bool App::test_mesh()
-{
-	VkBufferCreateInfo buffer_info
-	{
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = vertexs.size() * sizeof(Vertex),
-		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-	};
-
-	VmaAllocationCreateInfo alloc_info
-	{
-		.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-		.usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
-		//.usage = VMA_MEMORY_USAGE_AUTO,
-	};
-
-	if (vmaCreateBuffer(vma_allocator, &buffer_info, &alloc_info, &vertex_buffer, &vertex_alloc, nullptr) != VK_SUCCESS)
-		return error("vma cannot allocate mesh buffer");
-
-	//TODO understand this
-	void* data;
-	vmaMapMemory(vma_allocator, vertex_alloc, &data);
-	memcpy(data, vertexs.data(), vertexs.size() * sizeof(Vertex));
-	vmaUnmapMemory(vma_allocator, vertex_alloc);
-	
 	return true;
 }
 
@@ -749,7 +708,8 @@ bool App::initialiseVulkan()
 	if (!createCommandBuffer())
 		return false;
 
-	test_mesh();
+	new_mesh(tr1);
+	new_mesh(tr2);
 
 	return true;
 }
@@ -831,7 +791,10 @@ void App::shutdown()
 			vkDestroyCommandPool(vk_device, res.cmd_pool, nullptr);
 	}
 
-	vmaDestroyBuffer(vma_allocator, vertex_buffer, vertex_alloc);
+	for (Mesh mesh : meshs)
+	{
+		vmaDestroyBuffer(vma_allocator, mesh.vertex_buffer, mesh.vertex_alloc);
+	}
 
 	vkDestroySemaphore(vk_device, timeline_semaphore, nullptr);
 	
@@ -1022,11 +985,15 @@ void App::render(void)
 	vkCmdSetScissor(res.cmd_buffer, 0, 1, &scissor);
 
 	vkCmdBindPipeline(res.cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	//vkCmdDraw(res.cmd_buffer, 3, 1, 0, 0);
 
-	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(res.cmd_buffer, 0, 1, &vertex_buffer, &offset);
-	vkCmdDraw(res.cmd_buffer, vertexs.size(), 1, 0, 0);
+	i32 i = 0;
+	for (Mesh mesh : meshs)
+	{
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(res.cmd_buffer, 0, 1, &mesh.vertex_buffer, &offset);
+		vkCmdDraw(res.cmd_buffer, mesh.verticies.size(), 1, 0, 0);
+		++i;
+	}
 
 	vkCmdEndRendering(res.cmd_buffer);
 

@@ -83,10 +83,6 @@ class App
 
 	std::vector<Mesh> meshs;
 
-	//mesh test
-	VmaAllocation vertex_alloc = nullptr;
-	VkBuffer vertex_buffer = nullptr;
-
 	void render();
 	bool createVulkanInstance();
 	bool initialiseVulkan();
